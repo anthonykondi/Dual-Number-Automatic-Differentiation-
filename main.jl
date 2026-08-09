@@ -1,124 +1,119 @@
 import Pkg
 using BenchmarkTools
 import PyPlot as plt
-import Base: +,-,*,/,^
+import Base: +, -, *, /, ^, exp, log, sin, cos
 
 
 #### first order derivatives ####
 
 
-struct Dual{T<:Real}
+struct Dual{T<:Real, F<:Real}
     real::T
-    dual::T
+    dual::F
 end
 
 
 #### Dual to Dual operations ####
 
 
-function Base.:+(x::Dual, y::Dual)
-    x₀, x₁ = x.real, x.dual
-    y₀, y₁ = y.real, y.dual
-    xy = Dual(x₀ + y₀, x₁ + y₁)
-    return xy
-end
++(x::Dual, y::Dual) = Dual(
+    x.real + y.real, x.dual + y.dual
+)
 
+-(x::Dual, y::Dual) = Dual(
+    x.real - y.real, x.dual - y.dual
+)
 
-function Base.:-(x::Dual, y::Dual)
-    x₀, x₁ = x.real, x.dual
-    y₀, y₁ = y.real, y.dual
-    xy = Dual(x₀ - y₀, x₁ - y₁)
-    return xy
-end
+*(x::Dual, y::Dual) = Dual(
+    x.real * y.real, x.dual * y.real + x.real * y.dual
+)
 
+/(x::Dual, y::Dual) = Dual(
+    x.real / y.real, (x.dual * y.real - x.real * y.dual) / (y.real ^ 2)
+)
 
-function Base.:*(x::Dual, y::Dual)
-    x₀, x₁ = x.real, x.dual
-    y₀, y₁ = y.real, y.dual
-    xy = Dual(x₀ * y₀, x₁ * y₀ + x₀ * y₁)
-    return xy
-end
-
-
-function Base.:/(x::Dual, y::Dual)
-    x₀, x₁ = x.real, x.dual
-    y₀, y₁ = y.real, y.dual
-    xy = Dual(x₀ / y₀, (x₁ * y₀ - x₀ * y₁) / (y₀^2))
-    return xy
-end
+# also need to define negative (-)
+-(x::Dual) = Dual(-x.real, -x.dual)
 
 
 #### Dual to Other operations ####
+# could also use promotion rules to avoid having to implement every possible combination
 
-function Base.:^(x::Dual, n::Int64)
-    x_out = Dual(1, 0)
-    if n == 0
-        return x_out
-    else
-        for _ in 1:n
-            x_out *= x
-        end
-        return x_out
-    end
++(x::Dual, y::Real) = Dual(x.real + y, x.dual)
+
++(x::Real, y::Dual) = y + x    # if you do x + y you create ∞ recursion (stack overflow)
+
+-(x::Dual, y::Real) = Dual(x.real - y, x.dual)
+
+-(x::Real, y::Dual) = Dual(x - y.real, -y.dual)
+
+*(x::Dual, y::Real) = Dual(x.real * y, x.dual * y)
+
+*(x::Real, y::Dual) = y * x
+
+/(x::Real, y::Dual) = Dual(x / y.real, x * y.dual / (y.real ^ 2))
+
+/(x::Dual, y::Real) = Dual(x.real / y, x.dual / y)
+
+
+#### other functions (using their Taylor series) ####
+
+function ^(x::Dual, n::Real)
+    Dual(
+        x.real^n,
+        n * x.real ^ (n - 1) * x.dual
+    )
 end
 
+exp(x::Dual) = Dual(
+    exp(x.real),
+    exp(x.real) * x.dual
+)
 
-function Base.:+(x::Union{Float64, Int64}, y::Dual)
-    return Dual(y.real + x, y.dual)
-end
+log(x::Dual) = Dual(
+    log(x.real),
+    x.dual / x.real
+)
 
+sin(x::Dual) = Dual(
+    sin(x.real),
+    cos(x.real) * x.dual
+)
 
-function Base.:+(x::Dual, y::Union{Float64, Int64})
-    return Dual(x.real + y, x.dual)
-end
+cos(x::Dual) = Dual(
+    cos(x.real),
+    -sin(x.real) * x.dual
+)
 
+tan(x::Dual) = sin(x) / cos(x)
 
-function Base.:-(x::Union{Float64, Int64}, y::Dual)
-    return Dual(x - y.real, -y.dual)
-end
+sinh(x::Dual) = (exp(x) - exp(-x)) / 2
 
+cosh(x::Dual) = (exp(x) + exp(-x)) / 2
 
-function Base.:-(x::Dual, y::Union{Float64, Int64})
-    return Dual(x.real - y, x.dual)
-end
-
-
-function Base.:*(x::Union{Float64, Int64}, y::Dual)
-    return Dual(y.real * x, y.dual * x)
-end
-
-
-function Base.:*(x::Dual, y::Union{Float64, Int64})
-    return Dual(x.real * y, x.dual * y)
-end
-
-
-function Base.:/(x::Union{Float64, Int64}, y::Dual)
-    return Dual(x / y.real, x * y.dual / (y.real ^ 2))
-end
-
-
-function Base.:/(x::Dual, y::Union{Float64, Int64})
-    return Dual(x.real / y, x.dual / y)
-end
+tanh(x::Dual) = sinh(x) / cosh(x)
 
 
 #### 1st derivative ####
 
 
-function d1(f, x::Float64)   # f must be a combination of basic operations
-    x_prime = Dual(x, 1)
-    return f(x_prime).dual
-end
+d1(f, x) = f(Dual(x, 1)).dual
 
 
 #### testing ####
 
-test_f(x) = -4 + 1.2x - 3x^2 + 4x^3 + x^4 - 0.1x^6
+test_f1(x) = -4 + 1.2x - 3x^2 + 4x^3
+test_f2(x) = x ^ (0.5)
+test_f3(x) = exp(sin(x))
+test_f4(x) = exp(-x^2) * sin(2π*x)
+test_f5(x) = 1 / (1 + sin(x)^2)
+test_f6(x) = test_f5(test_f1(test_f3(x)))
 
-x = -3:0.01:3
-y = test_f.(x)
-y_prime = d1.(test_f, x)
+f = test_f6
+
+x = -10:0.001:10
+y = f.(x)
+y_prime = d1.(f, x)
 
 plt.plot(x, y, color="b")
 plt.plot(x, y_prime, color="r")
