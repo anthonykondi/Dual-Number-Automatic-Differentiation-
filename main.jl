@@ -200,22 +200,24 @@ test_f1(x) = -4 + 1.2x - 3x^2 + 4x^3
 test_f2(x) = x ^ (0.5)
 test_f3(x) = exp(sin(x))
 test_f4(x) = exp(-x^2) * sin(2π*x)
-test_f5(x) = 1 / (1 + sin(x)^2)
+test_f5(x) = exp(1 / (1 + sin(x)^2)) * sin(1 / (1 + x^2))
 test_f6(x) = test_f5(test_f1(test_f3(x)))
 test_f7(x) = (x - 3.5)^2 + 10
 test_f8(x) = 5*(2(x/8) + (x/8)^2 - (x/8)^3)
 
 
 # obtain random polynomial coefficients
-coeffs = rand_poly_coeffs(10, 100, true)
+# coeffs = rand_poly_coeffs(10, 100, true)
 
-f(x) = polynomial(x, coeffs)
+# f(x) = polynomial(x, coeffs)
+
+f(x) = test_f5(x)
 
 
-extrema = extremize_interval(f, -5., 5., 10, 0.001)
+extrema = extremize_interval(f, -10., 10., 10, 0.001)
 
 # evaluating and plotting
-x = -5:0.001:5
+x = -10:0.001:10
 y = f.(x)
 y_prime = d1.(f, x)
 y_dprime = d2.(f, x)
@@ -226,7 +228,7 @@ plt.plot(x, y_dprime, color="g", label="2nd derivative")
 plt.scatter(extrema, f.(extrema), marker="o", color="r", label="Extrema")
 plt.legend()
 
-plt.savefig("example(1).png")
+plt.savefig("example(2).png")
 
 plt.show() 
 

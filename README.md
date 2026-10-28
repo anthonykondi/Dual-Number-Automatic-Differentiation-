@@ -9,6 +9,9 @@ The project also includes a basic Newton's method optimization algorithm as a pr
 Plot of a randomly generated order 10 polynomial, optimized to find extrema in the bounded interval.
 ![example plot](example(1).png)
 
+Another example with a more complicated function.
+![example plot 2](example(2).png)
+
 ## How It Works
 
 1. **Define dual numbers:** Implement `HDual`, a hyper-dual number type storing a real value, two first-order derivative components, and a mixed second-order component.
