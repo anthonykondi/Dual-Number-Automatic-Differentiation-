@@ -207,7 +207,7 @@ test_f8(x) = 5*(2(x/8) + (x/8)^2 - (x/8)^3)
 
 
 # obtain random polynomial coefficients
-coeffs = rand_poly_coeffs(20, 100, true)
+coeffs = rand_poly_coeffs(10, 100, true)
 
 f(x) = polynomial(x, coeffs)
 
@@ -225,6 +225,9 @@ plt.plot(x, y_prime, color="r", label="1st derivative")
 plt.plot(x, y_dprime, color="g", label="2nd derivative")
 plt.scatter(extrema, f.(extrema), marker="o", color="r", label="Extrema")
 plt.legend()
+
+plt.savefig("example(1).png")
+
 plt.show() 
 
 
